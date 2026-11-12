@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>法人化か個人のままか 概算シミュレーター</title>
+<style>
+  body { font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; margin: 0; background: #f5f6f8; color: #222; line-height: 1.6; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.3rem; margin: 8px 0 4px; }
+  .lead { font-size: 0.9rem; color: #555; margin: 0 0 12px; }
+  section { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; border-left: 4px solid #3b6ea5; padding-left: 8px; }
+  label { display: block; font-size: 0.9rem; margin: 8px 0 2px; }
+  input[type=number], select { width: 100%; box-sizing: border-box; padding: 8px; font-size: 1rem; border: 1px solid #bbb; border-radius: 6px; }
+  .hint { font-size: 0.78rem; color: #666; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.95rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { border-bottom: 1px solid #e3e6ea; padding: 7px 4px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: #555; font-weight: 600; }
+  tr.total td { font-weight: 700; border-top: 2px solid #999; }
+  .verdict { font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: #eef4fb; margin-top: 10px; }
+  .warn { background: #fff4e5; color: #7a4a00; padding: 8px 10px; border-radius: 6px; font-size: 0.88rem; margin-top: 8px; }
+  .disclaimer { font-size: 0.8rem; color: #555; background: #fafafa; border: 1px dashed #bbb; padding: 10px 12px; border-radius: 8px; }
+  details { margin-top: 8px; font-size: 0.88rem; }
+  summary { cursor: pointer; color: #3b6ea5; }
+  .small { font-size: 0.8rem; color: #666; }
+  .step { background: #f3f7fc; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+  .profitBig { font-size: 1.25rem; font-weight: 700; margin: 4px 0; }
+  .barBox { margin: 14px 0; }
+  .barTitle { font-size: 0.92rem; font-weight: 700; margin-bottom: 6px; }
+  .bar { display: flex; height: 34px; border-radius: 6px; overflow: hidden; background: #eee; }
+  .legend { margin-top: 8px; }
+  .leg { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 2px 0; }
+  .leg .amt { margin-left: auto; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .btn { padding: 8px 14px; font-size: 0.95rem; border: 0; border-radius: 6px; background: #3b6ea5; color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>法人化か個人のままか 概算シミュレーター</h1>
+  <p class="lead">売上と経費、役員報酬の希望額を入れると、個人のままの場合と法人にした場合の税・社会保険料を並べて概算します。</p>
+
+  <section>
+    <h2>1. 数字を入れる（万円）</h2>
+    <label for="sales">年間の売上</label>
+    <input type="number" id="sales" value="800" min="0" step="1">
+    <label for="expenses">年間の経費（売上を得るためにかかった費用）</label>
+    <input type="number" id="expenses" value="100" min="0" step="1">
+    <label for="blue">青色申告特別控除</label>
+    <select id="blue">
+      <option value="0">なし（白色）</option>
+      <option value="10">10万円</option>
+      <option value="65" selected>65万円（e-Taxなどの要件を満たす場合）</option>
+    </select>
+    <label for="city">お住まいの市区町村（国保の料率に使います）</label>
+    <select id="city">
+      <option value="tokyo23" selected>東京23区（統一料率）</option>
+      <option value="yokohama">横浜市</option>
+      <option value="kawasaki">川崎市（概算・令和7年度の標準料率を参考）</option>
+      <option value="saitama">埼玉県（入間市の税率を参考・概算）</option>
+    </select>
+    <p class="hint">江東区・横浜市は令和8年度の公表値です。川崎市と埼玉県は概算で、市ごとに実際の料率は異なります。ほかの市区町村は、料率が確認でき次第追加します。</p>
+    <label for="salary">法人にした場合の役員報酬（年額・本人）</label>
+    <input type="number" id="salary" value="300" min="0" step="10">
+    <p class="hint">役員報酬＝社長が会社から給料として受け取る年額です。利益からこの額が差し引かれ、残りは会社に残ります（残りには法人税などがかかります）。</p>
+    <div id="salaryHint" class="step" style="margin-top:10px;"></div>
+    <input type="range" id="salarySlider" min="0" max="5000" step="10" value="300" style="width:100%;margin-top:6px;">
+    <p class="hint">スライダーを動かすと、役員報酬の額と下の棒グラフが連動します。</p>
+    <label class="check"><input type="checkbox" id="age40"> 40〜64歳（介護保険料がかかる）</label>
+  </section>
+
+  <section>
+    <h2>2. 従業員（法人にした場合のみ）</h2>
+    <p class="small">社会保険の加入対象と、対象外（アルバイト等）を分けて入れます。加入対象の目安は、週の所定労働時間20時間以上かつ月額賃金8.8万円以上です（要確認）。</p>
+    <label for="empCount">社会保険の加入対象の従業員（人数）</label>
+    <input type="number" id="empCount" value="0" min="0" step="1">
+    <label for="empMonthly">加入対象の従業員 1人あたり 月額給与（円）</label>
+    <input type="number" id="empMonthly" value="250000" min="0" step="10000">
+    <label for="partTime">アルバイト等（社会保険の対象外）の年間支払額（万円）</label>
+    <input type="number" id="partTime" value="0" min="0" step="10">
+    <p class="hint">アルバイト等は社会保険料がかかりません。給与として経費になるため、法人の利益と税に影響します。</p>
+  </section>
+
+  <section>
+    <h2>3. 所得控除（任意）</h2>
+    <details>
+      <summary>控除の入力を開く（わからなければ空欄のままで進められます）</summary>
+      <p class="small">社会保険料控除（国保・国民年金、役員の社会保険料）と基礎控除は自動で入ります。下の項目は、わかるものだけ入れてください。空欄は0円として計算します。</p>
+    <label for="fuyou">扶養親族の人数（16歳以上・一般の扶養）</label>
+    <input type="number" id="fuyou" value="0" min="0" step="1">
+    <label class="check"><input type="checkbox" id="haiguu"> 配偶者がいる（配偶者の所得が48万円以下）</label>
+    <label for="seimei">生命保険料の年額（万円）</label>
+    <input type="number" id="seimei" value="0" min="0" step="1">
+    <p class="hint">所得税は12万円、住民税は7万円が控除の上限です（簡略化して上限のみ適用）。</p>
+    <label for="sho">小規模企業共済・iDeCoの掛金の年額（万円）</label>
+    <input type="number" id="sho" value="0" min="0" step="1">
+    <label for="medical">医療費の年額（万円）</label>
+    <input type="number" id="medical" value="0" min="0" step="1">
+    <p class="hint">医療費控除は、10万円または所得の5%のどちらか少ない額を超えた分です。</p>
+    </details>
+  </section>
+
+  <section>
+    <h2>4. 結果（1年あたり・概算）</h2>
+    <div id="profitBox"></div>
+    <div id="result"></div>
+  </section>
+
+  <section>
+    <h2>5. 役員報酬を変えた場合</h2>
+    <p class="small">本人の手取りと、税・社会保険料の合計を、役員報酬ごとに比べます。</p>
+    <div id="sensitivity"></div>
+  </section>
+
+  <section>
+    <details>
+      <summary>使っている料率・税額（基準と出典）</summary>
+      <div class="small" id="ratesBox"></div>
+    </details>
+  </section>
+
+  <section>
+    <div class="disclaimer">
+      この計算は概算です。税務上の判断や最終的な納税額を保証するものではありません。市区町村や加入保険組合によって数字は変わります。法人化には設立費用、決算・申告の手間、社会保険の加入手続きも伴います。最終判断は税理士にご相談ください。<br>
+      入力された数字は、このページの外に送信されません。ブラウザ内だけで計算します。
+    </div>
+  </section>
+</main>
+
+<script>
+// ============================================================
+// 料率・税額（基準と出典を明記。計算前に必ず最新版を確認）
+// ============================================================
+// 市区町村ごとの国保料率（令和8年度・出典の公表値）
+// 項目: 所得割率 rate / 均等割額 per / 限度額 cap
+const CITY_PRESETS = {
+  koto: {   // 江東区 出典: 江東区 令和8年度国民健康保険料率等
+    iryo:   { rate: 0.0751, per: 47600, cap: 670000 },
+    shien:  { rate: 0.0280, per: 17600, cap: 260000 },
+    kaigo:  { rate: 0.0243, per: 17800, cap: 170000 },
+    kodomo: { rate: 0.0027, per: 1873,  cap: 30000 }
+  },
+  yokohama: {   // 横浜市 出典: 横浜市 令和8年度保険料の料率等（2026年5月25日告示）
+    iryo:   { rate: 0.0833, per: 40870, cap: 670000 },
+    shien:  { rate: 0.0262, per: 13380, cap: 260000 },
+    kaigo:  { rate: 0.0284, per: 16200, cap: 170000 },
+    kodomo: { rate: 0.0034, per: 1770,  cap: 30000 }
+  },
+  tokyo23: {   // 東京23区（統一保険料方式）出典: 江東区・大田区の令和8年度公表値（江戸川区のページは別数値のため要確認）
+    iryo:   { rate: 0.0751, per: 47600, cap: 670000 },
+    shien:  { rate: 0.0280, per: 17600, cap: 260000 },
+    kaigo:  { rate: 0.0243, per: 17800, cap: 170000 },
+    kodomo: { rate: 0.0027, per: 1873,  cap: 30000 }
+  },
+  kawasaki: {   // 川崎市 概算: 令和7年度の市町村標準保険料率（神奈川県算定結果）を参考。令和8年度の公表値ではない。子ども分は23区の値で仮置き
+    iryo:   { rate: 0.0768, per: 42527, cap: 670000 },
+    shien:  { rate: 0.0287, per: 16169, cap: 260000 },
+    kaigo:  { rate: 0.0254, per: 15890, cap: 170000 },
+    kodomo: { rate: 0.0027, per: 1873,  cap: 30000 }
+  },
+  saitama: {   // 埼玉県 入間市の令和8年度税率（県の仮算定を採用）を参考。介護分・子ども分は23区の値で仮置き（概算）
+    iryo:   { rate: 0.0797, per: 48420, cap: 670000 },
+    shien:  { rate: 0.0285, per: 17202, cap: 260000 },
+    kaigo:  { rate: 0.0243, per: 17800, cap: 170000 },
+    kodomo: { rate: 0.0027, per: 1873,  cap: 30000 }
+  }
+};
+
+const RATES = {
+  // 社会保険（協会けんぽ東京支部 令和8年度・2026年3月分〜）
+  kenpo: 0.0985,       // 健康保険料率（東京都）出典: 協会けんぽ 令和8年度 都道府県単位保険料率
+  kaigo: 0.0162,       // 介護保険料率（全国一律）出典: 協会けんぽ 令和8年度
+  kodomo: 0.0023,      // 子ども・子育て支援金率（全国一律・2026年4月分〜）出典: 協会けんぽ東京支部
+  kosei: 0.183,        // 厚生年金保険料率18.3%（固定）出典: 日本年金機構
+  koseiCap: 650000,    // 標準報酬月額の上限65万円（2027年9月から段階的に引き上げ予定・要確認）出典: 厚生労働省
+  kokuNen: 17920 * 12, // 国民年金 月額17,920円（令和8年度）出典: 日本年金機構
+
+  // 国保（選んだ市区町村の料率。初期値は江東区）
+  kokuho: CITY_PRESETS.tokyo23,
+
+  // 所得税・住民税・事業税（個人）※基礎控除などは要確認
+  kisoIT: 580000,      // 所得税の基礎控除58万円（令和7年分以後）出典: 国税庁 令和7年度税制改正
+  kisoJumin: 430000,   // 住民税の基礎控除43万円（据え置き）出典: 令和7年度税制改正（住民税は改正なし）
+  juminRate: 0.10,     // 住民税 所得割
+  juminKintou: 6000,   // 住民税 均等割（5,000円＋森林環境税1,000円）※要確認
+  jigyoRate: 0.05,     // 事業税 標準税率（業種による・要確認）
+  jigyoKojo: 2900000,  // 事業税の控除額
+
+  // 法人（中小法人）※要確認
+  corpLow: 0.15,       // 年800万円以下
+  corpHigh: 0.232,     // 800万円超
+  corpLimit: 8000000,
+  corpJigyoRate: 0.035,// 法人事業税（所得割・要確認）
+  corpJuminKintou: 70000, // 法人住民税 均等割（要確認）
+  corpJuminRate: 0.043    // 法人住民税 法人税割（要確認）
+};
+
+// 所得税の速算表（課税所得の上限、税率、控除額）
+const IT_TABLE = [
+  [1950000, 0.05, 0],
+  [3300000, 0.10, 97500],
+  [6950000, 0.20, 427500],
+  [9000000, 0.23, 636000],
+  [18000000, 0.33, 1536000],
+  [40000000, 0.40, 2796000],
+  [Infinity, 0.45, 4796000]
+];
+
+function incomeTax(taxable) {
+  if (taxable <= 0) return 0;
+  for (const [lim, rate, ded] of IT_TABLE) {
+    if (taxable <= lim) return Math.floor((taxable * rate - ded) * 1.021); // 復興特別所得税2.1%込み
+  }
+}
+
+// 給与所得控除（令和7年分以降の表。要確認）
+function kyuyoKojo(x) {
+  if (x <= 1900000) return 650000;
+  if (x <= 3600000) return x * 0.30 + 80000;
+  if (x <= 6600000) return x * 0.20 + 440000;
+  if (x <= 8500000) return x * 0.10 + 1100000;
+  return 1950000;
+}
+
+// 国保（所得割＋均等割。項目ごとに上限）
+function kokuhoAnnual(biz, age40) {
+  const base = Math.max(0, biz - RATES.kisoJumin);
+  let total = 0;
+  for (const key of ["iryo", "shien", "kaigo", "kodomo"]) {
+    if (key === "kaigo" && !age40) continue;
+    const c = RATES.kokuho[key];
+    total += Math.min(base * c.rate + c.per, c.cap);
+  }
+  return Math.floor(total);
+}
+
+const yen = n => Math.round(n).toLocaleString("ja-JP") + "円";
+const man = n => (Math.round(n / 1000) / 10).toLocaleString("ja-JP") + "万円";
+
+// ============================================================
+// 計算本体
+// ============================================================
+// 所得控除の合計（所得税ベース・住民税ベース）
+// shakai: 社会保険料控除, income: その人の所得（医療費控除の判定に使う）
+function medicalDed(v, income) {
+  return Math.min(2000000, Math.max(0, v.medical - Math.min(100000, income * 0.05)));
+}
+function dedIT(v, shakai, income) {
+  return 580000 + shakai + Math.min(v.seimei, 120000) + v.sho
+       + v.fuyou * 380000 + (v.haiguu ? 380000 : 0) + medicalDed(v, income);
+}
+function dedJumin(v, shakai, income) {
+  return 430000 + shakai + Math.min(v.seimei, 70000) + v.sho
+       + v.fuyou * 330000 + (v.haiguu ? 330000 : 0) + medicalDed(v, income);
+}
+
+function calcAll(v) {
+  const profit = v.sales - v.expenses;             // 事業利益（青色控除前）
+  const biz = Math.max(0, profit - v.blue);        // 事業所得（個人）
+
+  // --- 個人のまま ---
+  const pShakai = kokuhoAnnual(biz, v.age40) + RATES.kokuNen;   // 国保・国民年金は社会保険料控除の対象
+  const pDedIT = dedIT(v, pShakai, biz);
+  const pDedJ = dedJumin(v, pShakai, biz);
+  const pTaxIT = Math.max(0, biz - pDedIT);                     // 所得税の課税所得
+  const pTaxJ = Math.max(0, biz - pDedJ);                       // 住民税の課税所得
+  const pIT = incomeTax(pTaxIT);
+  const pJumin = pTaxJ * RATES.juminRate + RATES.juminKintou;
+  const pJigyo = Math.max(0, biz - RATES.jigyoKojo) * RATES.jigyoRate;
+  const pKokuho = kokuhoAnnual(biz, v.age40);
+  const pKokunen = RATES.kokuNen;
+  const pBurden = pIT + pJumin + pJigyo + pKokuho + pKokunen;
+  const pTake = profit - pBurden;
+
+  // --- 法人にした場合（役員報酬 R） ---
+  const R = v.salary;
+  const healthRate = RATES.kenpo + (v.age40 ? RATES.kaigo : 0) + RATES.kodomo;
+  const healthTotal = R * healthRate;               // 健康保険系（本人＋会社）
+  const pensionBase = Math.min(R / 12, RATES.koseiCap) * 12;
+  const pensionTotal = pensionBase * RATES.kosei;   // 厚生年金（本人＋会社）
+  const socialTotal = healthTotal + pensionTotal;
+  const socialEmp = socialTotal / 2;                // 本人負担（折半）
+  const socialCo = socialTotal / 2;                 // 会社負担（損金算入）
+
+  const kk = kyuyoKojo(R);
+  const giyu = Math.max(0, R - kk);                             // 給与所得（役員報酬−給与所得控除）
+  const empDedIT = dedIT(v, socialEmp, giyu);
+  const empDedJ = dedJumin(v, socialEmp, giyu);
+  const empTaxIT = Math.max(0, giyu - empDedIT);
+  const empTaxJ = Math.max(0, giyu - empDedJ);
+  const empIT = incomeTax(empTaxIT);
+  const empJumin = empTaxJ * RATES.juminRate + RATES.juminKintou;
+  const empTake = R - socialEmp - empIT - empJumin;
+
+  // --- 従業員（法人のみ発生。個人のままでは発生しない費用） ---
+  const empMonthly = v.empMonthly;
+  const empCount = v.empCount;
+  const empSocialBase = Math.min(empMonthly, RATES.koseiCap) * 12;   // 月額の上限で計算（簡略）
+  const empSocialPerPerson = empSocialBase * (RATES.kenpo + RATES.kodomo + RATES.kosei);
+  const empSocialCo = empCount * empSocialPerPerson / 2;             // 会社負担（折半の半分）
+  const empSalaryTotal = empCount * empMonthly * 12 + v.partTime;    // 従業員・アルバイトの給与合計
+  const partTimeOnly = v.partTime;                                    // 社会保険の対象外分（表示用）
+
+  const corpProfit = profit - R - socialCo - empSalaryTotal - empSocialCo;   // 法人の所得（損金後）
+  const corpTaxable = Math.max(0, corpProfit);
+  const corpTax = Math.min(corpTaxable, RATES.corpLimit) * RATES.corpLow
+                + Math.max(0, corpTaxable - RATES.corpLimit) * RATES.corpHigh;
+  const corpJigyo = corpTaxable * RATES.corpJigyoRate;
+  const corpJumin = RATES.corpJuminKintou + corpTax * RATES.corpJuminRate;
+  const corpRetain = corpProfit - corpTax - corpJigyo - corpJumin;
+
+  const corpBurden = empIT + empJumin + socialEmp + socialCo + corpTax + corpJigyo + corpJumin;
+
+  return {
+    profit, biz,
+    pIT, pJumin, pJigyo, pKokuho, pKokunen, pBurden, pTake,
+    R, socialEmp, socialCo, empIT, empJumin, empTake,
+    corpProfit, corpTax, corpJigyo, corpJumin, corpRetain,
+    corpBurden,
+    empSocialCo, empSalaryTotal, partTimeOnly, empCount,
+    pShakai, pDedIT, pTaxIT, giyu, empDedIT, empTaxIT
+  };
+}
+
+function readInputs() {
+  return {
+    sales: (parseFloat(document.getElementById("sales").value) || 0) * 10000,
+    expenses: (parseFloat(document.getElementById("expenses").value) || 0) * 10000,
+    blue: parseFloat(document.getElementById("blue").value) * 10000,
+    salary: (parseFloat(document.getElementById("salary").value) || 0) * 10000,
+    age40: document.getElementById("age40").checked,
+    empCount: parseFloat(document.getElementById("empCount").value) || 0,
+    empMonthly: parseFloat(document.getElementById("empMonthly").value) || 0,
+    partTime: (parseFloat(document.getElementById("partTime").value) || 0) * 10000,
+    fuyou: parseFloat(document.getElementById("fuyou").value) || 0,
+    haiguu: document.getElementById("haiguu").checked,
+    seimei: (parseFloat(document.getElementById("seimei").value) || 0) * 10000,
+    sho: (parseFloat(document.getElementById("sho").value) || 0) * 10000,
+    medical: (parseFloat(document.getElementById("medical").value) || 0) * 10000
+  };
+}
+
+// 利益の使い道を棒グラフで表示
+function barHTML(title, total, segs) {
+  const max = Math.max(total, 1);
+  let bar = "", legend = "";
+  for (const s of segs) {
+    const val = Math.max(0, s.v);
+    const pct = (val / max * 100).toFixed(2);
+    bar += `<div title="${s.l}：${yen(s.v)}" style="width:${pct}%;background:${s.c};height:100%"></div>`;
+    legend += `<div class="leg"><span class="dot" style="background:${s.c}"></span>${s.l}<span class="amt">${yen(s.v)}</span></div>`;
+  }
+  return `<div class="barTitle">${title}</div><div class="bar">${bar}</div><div class="legend">${legend}</div>`;
+}
+
+function buildProfitBox(v, r) {
+  const profit = r.profit;
+  const profitMan = Math.max(0, Math.round(profit / 10000));
+  const slider = document.getElementById("salarySlider");
+  slider.max = profitMan;
+  slider.value = Math.min(profitMan, Math.round(v.salary / 10000));
+
+  const indiv = barHTML("個人のまま：利益の使い道", profit, [
+    { l: "手取り", v: r.pTake, c: "#2e7d32" },
+    { l: "所得税", v: r.pIT, c: "#e57373" },
+    { l: "住民税", v: r.pJumin, c: "#ef9a9a" },
+    { l: "事業税", v: r.pJigyo, c: "#ffd54f" },
+    { l: "国保・国民年金", v: r.pKokuho + r.pKokunen, c: "#ffb74d" }
+  ]);
+  const corp = barHTML(`法人にした場合：利益の使い道（役員報酬 ${man(v.salary)}）`, profit, [
+    { l: "本人の手取り", v: r.empTake, c: "#2e7d32" },
+    { l: "本人の所得税", v: r.empIT, c: "#e57373" },
+    { l: "本人の住民税", v: r.empJumin, c: "#ef9a9a" },
+    { l: "本人の社会保険料", v: r.socialEmp, c: "#ffcc80" },
+    { l: "会社の社保（役員分）", v: r.socialCo, c: "#ffb74d" },
+    { l: "従業員の給与・社保", v: r.empSalaryTotal + r.empSocialCo, c: "#ba68c8" },
+    { l: "法人税・住民税・事業税", v: r.corpTax + r.corpJigyo + r.corpJumin, c: "#90a4ae" },
+    { l: "法人に残る", v: r.corpRetain, c: "#42a5f5" }
+  ]);
+
+  const step = `<div class="step">
+    <div>① 売上 ${man(v.sales)} − 経費 ${man(v.expenses)}</div>
+    <div class="profitBig">事業利益 ${yen(profit)}</div>
+    <div>− 青色申告特別控除 ${man(v.blue)} ＝ 所得（個人） ${yen(r.biz)}</div>
+    <div class="small">この利益を「社長の給料」「税」「社会保険」「会社に残る分」に振り分けます。</div>
+  </div>`;
+  const warnProfit = profit <= 0 ? `<div class="warn">事業利益がありません。</div>` : "";
+  const warnCorp = r.corpRetain < 0
+    ? `<div class="warn">役員報酬と社会保険料などが利益を上回っています。法人の残りがマイナス（赤字）になります。</div>` : "";
+  const warnSal = v.salary > profit && profit > 0
+    ? `<div class="warn">役員報酬が事業利益を超えています。役員報酬を下げてください。</div>` : "";
+
+  return step + warnProfit + `<div class="barBox">${indiv}</div><div class="barBox">${corp}</div>` + warnCorp + warnSal;
+}
+
+// 会社が赤字にならない役員報酬の上限（二分探索）
+function maxSalaryFor(v) {
+  const profit = v.sales - v.expenses;
+  if (profit <= 0) return 0;
+  let lo = 0, hi = profit;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    const rr = calcAll({ ...v, salary: mid });
+    if (rr.corpProfit >= 0) lo = mid; else hi = mid;
+  }
+  return Math.floor(lo / 10000) * 10000;   // 万円単位に切り捨て
+}
+
+function renderSalaryHint(v) {
+  const profit = v.sales - v.expenses;
+  const maxR = maxSalaryFor(v);
+  const cur = calcAll(v);
+  const remain = cur.corpRetain;
+  const el = document.getElementById("salaryHint");
+  el.innerHTML = `
+    <div>事業利益 <strong>${yen(profit)}</strong>（売上−経費）</div>
+    <div>役員報酬の上限（会社が赤字にならない目安）：<strong>${man(maxR)}</strong></div>
+    <div>今の役員報酬 ${man(v.salary)} のとき、会社に残る額：<strong>${yen(remain)}</strong>（法人税等を引いた後）</div>
+    ${v.salary > profit ? `<div class="warn">役員報酬が事業利益を超えています。</div>` : ""}
+  `;
+}
+
+function render() {
+  const v = readInputs();
+  const r = calcAll(v);
+  const diffTake = r.empTake - r.pTake;
+  const diffBurden = r.corpBurden - r.pBurden;
+
+  let verdict;
+  if (diffBurden < 0) {
+    verdict = `この条件では、法人にすると税・社会保険料の合計が年${yen(-diffBurden)}少なくなります。`;
+  } else {
+    verdict = `この条件では、法人にすると税・社会保険料の合計が年${yen(diffBurden)}多くなります。`;
+  }
+
+  const warn = (v.salary > r.profit)
+    ? `<div class="warn">役員報酬が事業利益を上回っています。法人は赤字になります。役員報酬を見直してください。</div>` : "";
+
+  document.getElementById("profitBox").innerHTML = buildProfitBox(v, r);
+  renderSalaryHint(v);
+
+  document.getElementById("result").innerHTML = `
+    <table>
+      <tr><th>項目</th><th>個人のまま</th><th>法人にした場合</th></tr>
+      <tr><td>事業利益（売上−経費）</td><td>${yen(r.profit)}</td><td>${yen(r.profit)}</td></tr>
+      <tr><td>所得（個人は青色控除後／法人は給与所得）</td><td>${yen(r.biz)}</td><td>給与所得 ${yen(r.giyu)}</td></tr>
+      <tr><td>所得控除の合計（所得税）</td><td>${yen(r.pDedIT)}</td><td>${yen(r.empDedIT)}</td></tr>
+      <tr><td>課税所得（所得税）</td><td>${yen(r.pTaxIT)}</td><td>${yen(r.empTaxIT)}</td></tr>
+      <tr><td>所得税（本人分）</td><td>${yen(r.pIT)}</td><td>${yen(r.empIT)}</td></tr>
+      <tr><td>住民税（本人分）</td><td>${yen(r.pJumin)}</td><td>${yen(r.empJumin)}</td></tr>
+      <tr><td>事業税</td><td>${yen(r.pJigyo)}</td><td>—（法人事業税は下に含む）</td></tr>
+      <tr><td>社会保険料（本人負担）</td><td>国保・国民年金 ${yen(r.pKokuho + r.pKokunen)}</td><td>${yen(r.socialEmp)}</td></tr>
+      <tr><td>社会保険料（会社負担）</td><td>—</td><td>${yen(r.socialCo)}</td></tr>
+      <tr><td>法人税・法人住民税・法人事業税</td><td>—</td><td>${yen(r.corpTax + r.corpJigyo + r.corpJumin)}</td></tr>
+      <tr><td>従業員（社会保険の対象者）の会社負担分</td><td>—</td><td>${yen(r.empSocialCo)}　※比較の対象外</td></tr>
+      <tr><td>従業員・アルバイトの給与（経費）</td><td>—</td><td>${yen(r.empSalaryTotal)}　※比較の対象外（うちアルバイト ${yen(r.partTimeOnly)}・社保なし）</td></tr>
+      <tr class="total"><td>税・社会保険料の合計（役員本人分）</td><td>${yen(r.pBurden)}</td><td>${yen(r.corpBurden)}</td></tr>
+      <tr class="total"><td>本人の手取り（年額）</td><td>${yen(r.pTake)}</td><td>${yen(r.empTake)}</td></tr>
+      <tr><td>法人に残る利益（本人の手取りではない）</td><td>—</td><td>${yen(r.corpRetain)}</td></tr>
+    </table>
+    <div class="verdict">${verdict}<br>本人の手取りの差は年${yen(diffTake)}です（法人−個人）。</div>
+  `;
+
+  // 役員報酬を変えた場合の一覧
+  const steps = [200, 300, 400, 500, 600].map(m => m * 10000);
+  let rows = "";
+  for (const s of steps) {
+    const rr = calcAll({ ...v, salary: s });
+    rows += `<tr>
+      <td>${man(s)}</td>
+      <td>${yen(rr.empTake)}</td>
+      <td>${yen(rr.corpBurden)}</td>
+      <td>${yen(rr.pBurden)}</td>
+      <td>${yen(rr.corpBurden - rr.pBurden)}</td>
+    </tr>`;
+  }
+  document.getElementById("sensitivity").innerHTML = `
+    <table>
+      <tr><th>役員報酬</th><th>本人の手取り（法人）</th><th>税・社保の合計（法人）</th><th>税・社保の合計（個人）</th><th>差（法人−個人）</th></tr>
+      ${rows}
+    </table>
+    <p class="small">差がマイナスなら、法人のほうが税・社会保険料の合計が少ない条件です。</p>
+  `;
+}
+
+function renderRates() {
+  document.getElementById("ratesBox").innerHTML = `
+    <p><strong>社会保険</strong>：健康保険 9.85%（東京都・令和8年度）、介護保険 1.62%（40〜64歳）、子ども・子育て支援金 0.23%。出典：協会けんぽ 令和8年度 保険料率。<br>
+    厚生年金 18.3%（固定）は日本年金機構で確認済みです。標準報酬の上限は65万円です（2027年9月から段階的に上がる予定のため要確認）。</p>
+    <p><strong>従業員の社会保険</strong>：加入対象者は健康保険・厚生年金・子ども・子育て支援金を計算します（月額の標準報酬の区分は簡略化して、月額給与をそのまま使用）。介護保険（40〜64歳）は役員分のみ反映します。アルバイト等は社会保険料なし。加入対象の目安（週20時間以上・月額8.8万円以上）は要確認です。</p>
+    <p><strong>国保</strong>：市区町村を選ぶと、その市区町村の令和8年度の料率を使います。江東区（出典：江東区 令和8年度国民健康保険料率等）と横浜市（出典：横浜市 令和8年度保険料の料率等）に対応しています。</p>
+    <p><strong>国民年金</strong>：月額17,920円（令和8年度）。出典：日本年金機構。</p>
+    <p><strong>所得税・住民税</strong>：基礎控除（所得税58万円・住民税43万円）と給与所得控除（最低65万円）は、令和7年度税制改正で確認済みです。住民税の均等割（6,000円）は要確認です。</p>
+    <p><strong>事業税・法人税・法人住民税</strong>：税率はまだ確認できていないため、要確認です。特に法人事業税の所得割と法人住民税の法人税割は、確認後に差し替えます。</p>
+    <p><strong>所得控除</strong>：基礎控除（所得税58万円・住民税43万円）、扶養控除（所得税38万円・住民税33万円）、配偶者控除（同じく）、生命保険料控除の上限（所得税12万円・住民税7万円）、医療費控除（10万円または所得の5%）は要確認です。国保・国民年金は社会保険料控除の対象です。</p>
+    <p><strong>計算しないもの</strong>：配偶者の給与・控除の細かい条件（配偶者特別控除など）、消費税、退職金、社宅、設立費用、決算・申告の報酬、国保の市区町村差、役員報酬の期中変更。</p>
+  `;
+}
+
+["sales", "expenses", "blue", "salary", "age40", "empCount", "empMonthly", "partTime", "fuyou", "haiguu", "seimei", "sho", "medical"].forEach(id => {
+  document.getElementById(id).addEventListener("input", render);
+  document.getElementById(id).addEventListener("change", render);
+});
+document.getElementById("city").addEventListener("change", e => {
+  RATES.kokuho = CITY_PRESETS[e.target.value];
+  render();
+});
+document.getElementById("salarySlider").addEventListener("input", e => {
+  document.getElementById("salary").value = e.target.value;
+  render();
+});
+renderRates();
+render();
+</script>
+</body>
+</html>
