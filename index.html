@@ -540,20 +540,24 @@ document.getElementById("salarySlider").addEventListener("input", e => {
 });
 renderRates();
 render();
-// 入力中（キーボード表示中）は下部の固定バーを隠して、入力欄が見えるようにする
+// 下部の固定バーは「結果の欄が画面に見えている時だけ」表示し、入力中は隠す
+const fixedBar = document.getElementById("fixedBar");
+const resultSec = document.getElementById("result").closest("section");
+let inputFocused = false;
+function updateFixedBar() {
+  const r = resultSec.getBoundingClientRect();
+  const show = !inputFocused && r.top < window.innerHeight * 0.7 && r.bottom > 0;
+  fixedBar.classList.toggle("hide", !show);
+}
+window.addEventListener("scroll", updateFixedBar, { passive: true });
+window.addEventListener("resize", updateFixedBar);
 document.addEventListener("focusin", e => {
-  if (e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.add("hide");
+  if (e.target.matches("input, select, textarea")) { inputFocused = true; updateFixedBar(); }
 });
-// 入力を離れたとき・入力欄以外をタップしたときは必ず表示に戻す（端末によってfocusoutが出ないため）
 document.addEventListener("focusout", () => {
-  setTimeout(() => document.getElementById("fixedBar").classList.remove("hide"), 200);
+  setTimeout(() => { inputFocused = false; updateFixedBar(); }, 200);
 });
-document.addEventListener("touchstart", e => {
-  if (!e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.remove("hide");
-}, { passive: true });
-document.addEventListener("click", e => {
-  if (!e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.remove("hide");
-});
+updateFixedBar();
 </script>
 </body>
 </html>
