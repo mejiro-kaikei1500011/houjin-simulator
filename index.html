@@ -558,6 +558,10 @@ document.addEventListener("focusout", () => {
   setTimeout(() => { inputFocused = false; updateFixedBar(); }, 200);
 });
 updateFixedBar();
+// iPhoneなどでスクロール後に表示が更新されないことがあるため、補助的に定期確認も行う
+window.addEventListener("pageshow", updateFixedBar);
+document.addEventListener("touchend", () => setTimeout(updateFixedBar, 60), { passive: true });
+setInterval(updateFixedBar, 300);
 </script>
 </body>
 </html>
