@@ -40,6 +40,8 @@
   .fixedInner { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; }
   .fixedInner .lbl { color: #555; font-size: 0.78rem; }
   .fixedInner .val { font-weight: 700; font-size: 1rem; }
+  .fixedInner .headline { grid-column: 1 / -1; color: #1565c0; font-weight: 700; font-size: 1.05rem; text-align: center; }
+  .fixedInner .headline .big { font-size: 1.6rem; }
   .fixedInner .diff { grid-column: 1 / -1; font-size: 0.82rem; color: #333; border-top: 1px solid #e3e6ea; padding-top: 4px; }
   .btn { padding: 8px 14px; font-size: 0.95rem; border: 0; border-radius: 6px; background: #3b6ea5; color: #fff; cursor: pointer; }
 </style>
@@ -473,7 +475,13 @@ function render() {
   `;
 
   // 画面下に固定表示する要約（税・社保の合計と本人の手取り）
+  const headline = Math.abs(diffTake) < 1
+    ? `差はありません`
+    : (diffTake > 0
+        ? `法人の方が本人の手取りで年 <span class="big">${yen(Math.abs(diffTake))}</span> 有利`
+        : `個人の方が本人の手取りで年 <span class="big">${yen(Math.abs(diffTake))}</span> 有利`);
   document.getElementById("fixedInner").innerHTML = `
+    <div class="headline">${headline}</div>
     <div><div class="lbl">個人のまま：税・社保の合計</div><div class="val">${yen(r.pBurden)}</div></div>
     <div><div class="lbl">法人（役員報酬 ${man(v.salary)}）：税・社保の合計</div><div class="val">${yen(r.corpBurden)}</div></div>
     <div><div class="lbl">個人のまま：本人の手取り</div><div class="val">${yen(r.pTake)}</div></div>
