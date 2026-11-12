@@ -35,6 +35,12 @@
   .leg { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 2px 0; }
   .leg .amt { margin-left: auto; font-weight: 600; }
   .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  body { padding-bottom: 96px; }
+  .fixedBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: #fff; border-top: 2px solid #3b6ea5; box-shadow: 0 -2px 8px rgba(0,0,0,0.12); padding: 8px 12px; }
+  .fixedInner { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; }
+  .fixedInner .lbl { color: #555; font-size: 0.78rem; }
+  .fixedInner .val { font-weight: 700; font-size: 1rem; }
+  .fixedInner .diff { grid-column: 1 / -1; font-size: 0.82rem; color: #333; border-top: 1px solid #e3e6ea; padding-top: 4px; }
   .btn { padding: 8px 14px; font-size: 0.95rem; border: 0; border-radius: 6px; background: #3b6ea5; color: #fff; cursor: pointer; }
 </style>
 </head>
@@ -129,6 +135,8 @@
     </div>
   </section>
 </main>
+
+<div class="fixedBar" id="fixedBar"><div class="fixedInner" id="fixedInner"></div></div>
 
 <script>
 // ============================================================
@@ -462,6 +470,15 @@ function render() {
       <tr><td>法人に残る利益（本人の手取りではない）</td><td>—</td><td>${yen(r.corpRetain)}</td></tr>
     </table>
     <div class="verdict">${verdict}<br>本人の手取りの差は年${yen(diffTake)}です（法人−個人）。</div>
+  `;
+
+  // 画面下に固定表示する要約（税・社保の合計と本人の手取り）
+  document.getElementById("fixedInner").innerHTML = `
+    <div><div class="lbl">個人のまま：税・社保の合計</div><div class="val">${yen(r.pBurden)}</div></div>
+    <div><div class="lbl">法人（役員報酬 ${man(v.salary)}）：税・社保の合計</div><div class="val">${yen(r.corpBurden)}</div></div>
+    <div><div class="lbl">個人のまま：本人の手取り</div><div class="val">${yen(r.pTake)}</div></div>
+    <div><div class="lbl">法人：本人の手取り</div><div class="val">${yen(r.empTake)}</div></div>
+    <div class="diff">本人の手取りの差（法人−個人）：<strong>${yen(diffTake)}</strong>　／　税・社保の差（法人−個人）：<strong>${yen(diffBurden)}</strong></div>
   `;
 
   // 役員報酬を変えた場合の一覧
