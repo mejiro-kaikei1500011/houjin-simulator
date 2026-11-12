@@ -544,8 +544,15 @@ render();
 document.addEventListener("focusin", e => {
   if (e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.add("hide");
 });
+// 入力を離れたとき・入力欄以外をタップしたときは必ず表示に戻す（端末によってfocusoutが出ないため）
 document.addEventListener("focusout", () => {
-  document.getElementById("fixedBar").classList.remove("hide");
+  setTimeout(() => document.getElementById("fixedBar").classList.remove("hide"), 200);
+});
+document.addEventListener("touchstart", e => {
+  if (!e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.remove("hide");
+}, { passive: true });
+document.addEventListener("click", e => {
+  if (!e.target.matches("input, select, textarea")) document.getElementById("fixedBar").classList.remove("hide");
 });
 </script>
 </body>
